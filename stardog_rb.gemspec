@@ -1,5 +1,5 @@
 Gem::Specification.new do |s|
-  s.name        = "stardog_rb"
+  s.name        = "stardog-rb"
   s.version     = "0.0.1"
   s.summary     = "HTTP Bindings for Stardog RDF data base"
   s.date        = "2013-03-08"
