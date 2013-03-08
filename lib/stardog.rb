@@ -1,7 +1,6 @@
 require 'rest-client'
 require 'json'
 require 'tempfile'
-require 'debugger'
 
 require "net/http"
 
@@ -10,11 +9,9 @@ module Net
   class HTTPGenericRequest
 
     def write_header(sock, ver, path)
-      #puts "hey!"
       buf = "#{@method} #{path} HTTP/#{ver}\r\n"
       each_capitalized do |k,v|
         if k.downcase == "sd-connection-string"
-          #puts "FOUND!"
           k = "SD-Connection-String" 
         end
         buf << "#{k}: #{v}\r\n"
