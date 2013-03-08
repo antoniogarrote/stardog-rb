@@ -52,7 +52,6 @@ describe "Getting and using operations outside transactions" do
   it "should be possible to add and remove triples directly from a file on disk" do
     path = File.join(File.dirname(__FILE__), "data", "api_tests.nt")
     expect(File.exists?(path)).to be_true
-    puts "PATH #{path}"
     response = @conn.add(@db_name, path)    
 
     results = @conn.query(@db_name, "select ?s where { ?s ?p ?o }")
@@ -67,4 +66,20 @@ describe "Getting and using operations outside transactions" do
     expect(results.body["results"]["bindings"].length).to be_eql(0)
   end
 
+  it "should be possible to add triples directly from a remote URL" do
+    URL = "http://dbpedia.org/data/The_Lord_of_the_Rings"
+    
+    response = @conn.add(@db_name, URL, nil, "application/rdf+xml")    
+
+    results = @conn.query(@db_name, "select ?s where { ?s ?p ?o }")
+    expect(results.status).to be_eql(200)
+    expect(results.body["results"]["bindings"].length>0).to be_true
+
+    response = @conn.remove(@db_name, URL, nil, "application/rdf+xml")    
+
+    results = @conn.query(@db_name, "select ?s where { ?s ?p ?o }")
+    expect(results.status).to be_eql(200)
+    expect(results.body["results"]["bindings"].length).to be_eql(0)
+
+  end
 end

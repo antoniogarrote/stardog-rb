@@ -8,7 +8,7 @@ module Stardog
   # Current version of the library.
   VERSION = "0.0.1"
 
-  DEBUG = true
+  DEBUG = ENV["STARDOG_RB_DEBUG"] || false
 
   class StardogResponse
     attr_reader :status, :body
@@ -244,7 +244,12 @@ module Stardog
 
       if(File.exists?(body))
         body = File.open(body,"r").read
+      elsif(body =~ /^https?:\/\/[\S]+$/)
+        result = http_request("GET", body, (content_type == "text/plain" ? "*/*" : content_type), {}, nil, false)
+        raise Exception.new("Error adding data from remote URL #{body} => #{result.status} : #{result}") if result.status != 200
+        body = result.body
       end
+      
       http_request("POST", "#{database}/#{txID}/add", "*/*", options, body, false, content_type, nil)
     end
 
@@ -254,7 +259,12 @@ module Stardog
 
       if(File.exists?(body))
         body = File.open(body,"r").read
+      elsif(body =~ /^https?:\/\/[\S]+$/)
+        result = http_request("GET", body, (content_type == "text/plain" ? "*/*" : content_type), {}, nil, false)
+        raise Exception.new("Error adding data from remote URL #{body} => #{result.status} : #{result}") if result.status != 200
+        body = result.body
       end
+
       http_request("POST", "#{database}/#{txID}/remove", "text/plain", options, body, false, content_type, nil)
     end
 
@@ -341,7 +351,6 @@ module Stardog
         f << "}]}"
         f.flush
         f.close
-        puts `cat #{f.to_path}`
         http_request("POST", "admin/databases", "text/plain", {}, File.new(f.path), true, "application/json", true)                  
       end
     end
@@ -381,7 +390,11 @@ module Stardog
     private
 
     def http_request(method, resource, accept = "*/*", params = {}, msg_body = nil, is_json_body = true, content_type = nil, multipart = false)
-      url = "#{@endpoint}#{resource}"
+      url = if(resource =~ /https?/)
+              resource
+            else
+              "#{@endpoint}#{resource}"
+            end
       if(params.is_a?(Hash) && params.keys.length > 0)
         params = params.keys.map{|k| "#{CGI::escape(k.to_s)}=#{CGI::escape(params[k].to_s)}" }.join('&')
         url = "#{url}?#{params}"
