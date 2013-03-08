@@ -56,14 +56,17 @@ All operations will run inside a single Stardog transaction.
 ## Transactions
 
 Transactions can be executed using the *with_transaction* helper method that will take care of committing if the transaction is successful or rolling back the transaction if an exception is raised:
+
 ```ruby
     result = sd.with_transaction(db_name) do |txID|
       sd.add_in_transaction(db_name, txID, a_triple1)
       sd.add_in_transaction(db_name, txID, a_triple2)
     end
 ```
+
 The methods *add_in_transaction* and *remove_in_transaction* have the same interface as the *add* and *remove* functions but also accepting a transaction ID.
 The previous code is analogous to this version using the *begin* and *commit* methods:
+
 ```ruby
     result = begin
       txID = begin(db_name)
@@ -76,9 +79,11 @@ The previous code is analogous to this version using the *begin* and *commit* me
       false
     end    
 ```
+
 ## Queries
 
 Queries can be issued using the *query* method. Results will be returned as a *LinkedJSON* that can be processed as a regular Hash.
+
 ```ruby
     results = conn.query(db_name, "select ?g ?s where { graph ?g { ?s ?p ?o } }")
 
@@ -90,6 +95,7 @@ Queries can be issued using the *query* method. Results will be returned as a *L
 Options *limit*, *offset* and *base_uri* can be passed to the query method as a hash of options.
 
 Queries can be run inside a transaction using the *query_in_transaction* variation of the *query* method:
+
 ```ruby
     db.with_transaction(db_name) do |txID|
       results = query_in_transaction(db_name, txID, query)
