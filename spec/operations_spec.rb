@@ -1,0 +1,53 @@
+require File.join(File.dirname(__FILE__), "helper")
+
+include Stardog
+
+describe "Getting and using operations outside transactions" do
+
+  before(:each) do
+    @conn = stardog("http://localhost:5822/", :user => "admin", :password => "admin")
+    @db_name = "nodeDB_#{Time.now.to_i}"
+    @conn.create_db(@db_name)
+  end
+
+  after(:each) do
+    @conn.drop_db(@db_name)
+    @conn = nil
+  end
+
+  it "should be able to query the database" do
+    a_triple = '<http://localhost/publications/articles/Journal1/1940/Article2> <http://purl.org/dc/elements/1.1/subject> "A very interesting subject"^^<http://www.w3.org/2001/XMLSchema#string> .'
+    result = @conn.with_transaction(@db_name) do |txID|
+      response = @conn.add_in_transaction(@db_name, txID, a_triple)
+      expect(response.status).to be_eql(200)
+    end
+    expect(result).to be_true
+
+    results = @conn.query(@db_name, "select distinct ?s where { ?s ?p ?o }")
+    expect(results.status).to be_eql(200)
+    expect(results.body["head"]["vars"]).to be_eql(["s"])
+    expect(results.body["results"]["bindings"].first["s"]["value"]).to be_eql("http://localhost/publications/articles/Journal1/1940/Article2")
+  end
+
+
+  it "should be able get a transaction and add and remove a triple" do
+    a_triple = '<http://localhost/publications/articles/Journal1/1940/Article2> <http://purl.org/dc/elements/1.1/subject> "A very interesting subject"^^<http://www.w3.org/2001/XMLSchema#string> .'
+    response = @conn.add(@db_name, a_triple)
+    expect(response).to be_true
+
+    results = @conn.query(@db_name, "select distinct ?s where { ?s ?p ?o }")
+    expect(results.status).to be_eql(200)
+    expect(results.body["head"]["vars"]).to be_eql(["s"])
+    expect(results.body["results"]["bindings"].first["s"]["value"]).to be_eql("http://localhost/publications/articles/Journal1/1940/Article2")
+
+    response = @conn.remove(@db_name, a_triple)
+    expect(response).to be_true
+
+    results = @conn.query(@db_name, "select distinct ?s where { ?s ?p ?o }")
+    expect(results.status).to be_eql(200)
+    expect(results.body["head"]["vars"]).to be_eql(["s"])
+    expect(results.body["results"]["bindings"].length).to be_eql(0)
+  end
+
+
+end
