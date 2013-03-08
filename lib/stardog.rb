@@ -242,6 +242,9 @@ module Stardog
       options = nil
       options = {"graph_uri" => graph_uri} if graph_uri
 
+      if(File.exists?(body))
+        body = File.open(body,"r").read
+      end
       http_request("POST", "#{database}/#{txID}/add", "*/*", options, body, false, content_type, nil)
     end
 
@@ -249,6 +252,9 @@ module Stardog
       options = nil
       options = {"graph_uri" => graph_uri} if graph_uri
 
+      if(File.exists?(body))
+        body = File.open(body,"r").read
+      end
       http_request("POST", "#{database}/#{txID}/remove", "text/plain", options, body, false, content_type, nil)
     end
 

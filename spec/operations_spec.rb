@@ -49,5 +49,22 @@ describe "Getting and using operations outside transactions" do
     expect(results.body["results"]["bindings"].length).to be_eql(0)
   end
 
+  it "should be possible to add and remove triples directly from a file on disk" do
+    path = File.join(File.dirname(__FILE__), "data", "api_tests.nt")
+    expect(File.exists?(path)).to be_true
+    puts "PATH #{path}"
+    response = @conn.add(@db_name, path)    
+
+    results = @conn.query(@db_name, "select ?s where { ?s ?p ?o }")
+    expect(results.status).to be_eql(200)
+    expect(results.body["head"]["vars"]).to be_eql(["s"])
+    expect(results.body["results"]["bindings"].length).to be_eql(33)
+
+    response = @conn.remove(@db_name, path)
+    results = @conn.query(@db_name, "select ?s where { ?s ?p ?o }")
+    expect(results.status).to be_eql(200)
+    expect(results.body["head"]["vars"]).to be_eql(["s"])
+    expect(results.body["results"]["bindings"].length).to be_eql(0)
+  end
 
 end
