@@ -240,7 +240,7 @@ module Stardog
 
     def add_in_transaction(database, txID, body, graph_uri=nil, content_type="text/plain")
       options = nil
-      options = {"graph_uri" => graph_uri} if graph_uri
+      options = {"graph-uri" => graph_uri} if graph_uri
 
       if(File.exists?(body))
         body = File.open(body,"r").read
@@ -255,7 +255,7 @@ module Stardog
 
     def remove_in_transaction(database, txID, body, graph_uri=nil, content_type="text/plain")
       options = nil
-      options = {"graph_uri" => graph_uri} if graph_uri
+      options = {"graph-uri" => graph_uri} if graph_uri
 
       if(File.exists?(body))
         body = File.open(body,"r").read
@@ -311,7 +311,7 @@ module Stardog
 
 
     # Get configuration properties for the database.
-    # The lis of properties can be found here: http://stardog.com/docs/admin/#admin-db
+    # The list of properties can be found here: http://stardog.com/docs/admin/#admin-db
     # By default, "database.name", "icv.enabled", "search.enabled", "database.online", "index.type" properties a requested.
     def db_options(db_name, options = ["database.name", "icv.enabled", "search.enabled", "database.online", "index.type"])
       http_request("PUT", "admin/databases/#{db_name}/options", "application/json", {}, options.inject({}){|ac,i| ac[i]=""; ac})

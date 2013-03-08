@@ -80,6 +80,39 @@ describe "Getting and using operations outside transactions" do
     results = @conn.query(@db_name, "select ?s where { ?s ?p ?o }")
     expect(results.status).to be_eql(200)
     expect(results.body["results"]["bindings"].length).to be_eql(0)
+  end
+
+  it "should be possible to add and remove triples to an specific graph context" do
+    a_triple1 = '<http://localhost/publications/articles/Journal1/1940/Article1> <http://purl.org/dc/elements/1.1/subject> "A very interesting subject 1"^^<http://www.w3.org/2001/XMLSchema#string> .'
+    a_triple2 = '<http://localhost/publications/articles/Journal1/1940/Article2> <http://purl.org/dc/elements/1.1/subject> "A very interesting subject 2"^^<http://www.w3.org/2001/XMLSchema#string> .'
+    context1 = "test:graph1"
+    context2 = "test:graph2"
+    result = @conn.with_transaction(@db_name) do |txID|
+      response = @conn.add_in_transaction(@db_name, txID, a_triple1,context1)
+      expect(response.status).to be_eql(200)
+      response = @conn.add_in_transaction(@db_name, txID, a_triple2,context2)
+      expect(response.status).to be_eql(200)
+    end
+    expect(result).to be_true
+
+    results = @conn.query(@db_name, "select ?g ?s where { graph ?g { ?s ?p ?o } }")
+    expect(results.status).to be_eql(200)
+    expect(results.body["head"]["vars"]).to be_eql(["g","s"])
+    data = results.body["results"]["bindings"].inject({}){|a,b| a[b["g"]["value"]] = b["s"]["value"]; a}
+    expect(data[context1]).to be_eql("http://localhost/publications/articles/Journal1/1940/Article1")
+    expect(data[context2]).to be_eql("http://localhost/publications/articles/Journal1/1940/Article2")
+
+    result = @conn.with_transaction(@db_name) do |txID|
+      response = @conn.remove_in_transaction(@db_name, txID, a_triple2,context2)
+      expect(response.status).to be_eql(200)
+    end
+
+    results = @conn.query(@db_name, "select ?g ?s where { graph ?g { ?s ?p ?o } }")
+    expect(results.status).to be_eql(200)
+    expect(results.body["head"]["vars"]).to be_eql(["g","s"])
+    data = results.body["results"]["bindings"].inject({}){|a,b| a[b["g"]["value"]] = b["s"]["value"]; a}
+    expect(data[context1]).to be_eql("http://localhost/publications/articles/Journal1/1940/Article1")
+    expect(data[context2]).to be_nil
 
   end
 end
