@@ -3,6 +3,32 @@ require 'json'
 require 'tempfile'
 require 'debugger'
 
+require "net/http"
+
+module Net
+
+  class HTTPGenericRequest
+
+    def write_header(sock, ver, path)
+      #puts "hey!"
+      buf = "#{@method} #{path} HTTP/#{ver}\r\n"
+      each_capitalized do |k,v|
+        if k.downcase == "sd-connection-string"
+          #puts "FOUND!"
+          k = "SD-Connection-String" 
+        end
+        buf << "#{k}: #{v}\r\n"
+      end
+      buf << "\r\n"
+      #puts "WRITING..."
+      #puts buf
+      sock.write buf
+    end
+
+  end
+
+end
+
 module Stardog
 
   # Current version of the library.
@@ -105,7 +131,7 @@ module Stardog
         :query => query
       }
 
-      options[:base_uri] = base_uri if base_uri
+      options[:"base-uri"] = base_uri if base_uri
       options[:limit] = limit if limit
       options[:offset] = offset if offset
 
@@ -135,7 +161,7 @@ module Stardog
         :query => query
       }
 
-      options[:base_uri] = base_uri if base_uri
+      options[:"base-uri"] = base_uri if base_uri
       options[:limit] = limit if limit
       options[:offset] = offset if offset
 
@@ -149,7 +175,7 @@ module Stardog
         :query => query
       }
 
-      options[:base_uri] = base_uri if base_uri
+      options[:"base-uri"] = base_uri if base_uri
 
       http_request("GET", "#{database}/explain", "text/plain", options)
     end
@@ -210,7 +236,7 @@ module Stardog
         :query => query
       }
 
-      options[:base_uri] = base_uri if base_uri
+      options[:"base-uri"] = base_uri if base_uri
       options[:limit] = limit if limit
       options[:offset] = offset if offset
 
@@ -231,7 +257,7 @@ module Stardog
         :query => query
       }
 
-      options[:base_uri] = base_uri if base_uri
+      options["base-uri"] = base_uri if base_uri
       options[:limit] = limit if limit
       options[:offset] = offset if offset
 
@@ -291,13 +317,9 @@ module Stardog
       http_request("POST", url, "application/x-turtle", {}, axioms, false, content_type)
     end
 
-
-    def consistent?(database, accept, options = {})
-      options = nil
-      options = {"graph-uri" => options[:graph_uri]} if options[:graph_uri]
-      
-      res = http_request("GET", "#{database}/reasoning/consistency", "text/boolean", options)
-      (res == "true" ? true : false)
+    def consistent?(database)
+      res = http_request("GET", "#{database}/reasoning/consistency", "text/boolean", {}, nil, false)
+      (res.body == "true" ? true : false)
     end
 
     #######################    
@@ -406,10 +428,14 @@ module Stardog
         :url => url,
         :headers => {:accept => accept},
       }
+      if @reasoning
+        arguments[:headers]["SD-Connection-String"] = "reasoning=#{@reasoning}"
+      end
 
-      arguments[:headers]['SD-Connection-String'] = @reasoning if @reasoning
-
-      arguments.merge!(credentials) if credentials
+      #arguments.merge!(credentials) if credentials
+      if credentials
+        arguments[:url].gsub!("http://","http://#{credentials[:user]}:#{credentials[:password]}@")
+      end
 
       arguments[:payload] = msg_body if msg_body
 
@@ -417,7 +443,7 @@ module Stardog
         arguments[:headers][:content_type] = "application/json"
         arguments[:payload] = arguments[:payload].to_json if arguments.to_json != "" && !multipart
       else
-        arguments[:headers][:content_type] = content_type
+        arguments[:headers][:content_type] = content_type if content_type
       end
 
       file = nil
