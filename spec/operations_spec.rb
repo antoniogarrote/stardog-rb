@@ -130,8 +130,6 @@ describe "Getting and using operations outside transactions" do
     end
 
     results = @conn.query(@db_name, "select distinct ?s where { ?s ?p ?o }", :limit => 1, :offset => 0)
-    puts "RESULTS LIMIT OFFSET"
-    puts results.inspect
     expect(results.status).to be_eql(200)
     expect(results.body["head"]["vars"]).to be_eql(["s"])
     expect(results.body["results"]["bindings"].length).to be_eql(1)

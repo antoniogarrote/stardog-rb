@@ -26,7 +26,6 @@ describe "Drop DBs Test Suite" do
       expect(@conn.copy_db(db_name,db_copy_name).status).to eq(200)
       expect(@conn.online_db(db_name,"NO_WAIT").status).to eq(200)
     ensure
-      puts "REMOVING DBS"
       expect(@conn.drop_db(db_copy_name).status).to eq(200)
       expect(@conn.drop_db(db_name).status).to eq(200)
     end

@@ -79,6 +79,10 @@ module Stardog
     def to_s
       @attributes.to_json
     end
+
+    def method_missing(meth, *args, &block)
+      @attributes.send(meth, *args, &block) if @attributes.respond_to?(meth)
+    end
   end
 
 
@@ -137,13 +141,16 @@ module Stardog
 
     def add(database, body, graph_uri=nil, content_type="text/plain")
       with_transaction(database) do |txId|
-        add_in_transaction(database, txId, body, graph_uri, content_type)
+        result = add_in_transaction(database, txId, body, graph_uri, content_type)
+        raise Exception.new("Error adding data to database #{database} -> #{result.body}") unless(result.success?)
+        result
       end
     end
 
     def remove(database, body, graph_uri=nil, content_type="text/plain")
       with_transaction(database) do |txId|
-        remove_in_transaction(database, txId, body, graph_uri, content_type)
+        result = remove_in_transaction(database, txId, body, graph_uri, content_type)
+        raise Exception.new("Error removing data to database #{database} -> #{result.body}") unless(result.success?)
       end
     end
 
@@ -215,7 +222,7 @@ module Stardog
         debug ex.message
         debug ex.backtrace.join("\n")
         rollback(db_name, txID)
-        false
+        raise ex
       end
     end
 
@@ -225,8 +232,10 @@ module Stardog
       offset = options[:offset] 
       accept = options[:accept]
       ask_request = options.delete(:ask)
+      describe_request = options.delete(:describe)
 
       accept = 'text/boolean' if(ask_request)
+      accept = 'application/ld+json' if(describe_request)
       accept_header = accept ? accept : 'application/sparql-results+json'
       
       options = {
@@ -429,10 +438,7 @@ module Stardog
         arguments[:headers]["SD-Connection-String"] = "reasoning=#{@reasoning}"
       end
 
-      #arguments.merge!(credentials) if credentials
-      if credentials
-        arguments[:url].gsub!("http://","http://#{credentials[:user]}:#{credentials[:password]}@")
-      end
+      arguments.merge!(credentials) if credentials
 
       arguments[:payload] = msg_body if msg_body
 
@@ -491,7 +497,7 @@ module Stardog
       end
 
     rescue => exception
-      if(exception.respond_to?(:response))
+      if(exception.respond_to?(:response) && exception.response)
         debug "RESPONSE:"
         debug exception.response.code
         debug "---"
