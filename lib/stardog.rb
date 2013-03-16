@@ -328,6 +328,59 @@ module Stardog
       (res.body == "true" ? true : false)
     end
 
+    ########################    
+    # Integrity Constraints
+    ########################    
+
+    def list_icvs(database, options = {})
+      accept = options[:accept] || "application/x-turtle"
+      http_request("GET", "#{database}/icv", accept, {}, nil, false)
+    end
+
+    def add_icv(database, body, content_type = "text/plain")
+
+      if(File.exists?(body))
+        body = File.open(body,"r").read
+      elsif(body =~ /^https?:\/\/[\S]+$/)
+        result = http_request("GET", body, (content_type == "text/plain" ? "*/*" : content_type), {}, nil, false)
+        raise Exception.new("Error adding data from remote URL #{body} => #{result.status} : #{result}") if result.status != 200
+        body = result.body
+      end
+
+      is_json =  (content_type.index("json") ? true : false)
+      http_request("POST", "#{database}/icv/add", "*/*", {}, body, is_json, content_type, nil)
+    end
+
+    def remove_icv(database, body, content_type = "text/plain")
+      if(File.exists?(body))
+        body = File.open(body,"r").read
+      elsif(body =~ /^https?:\/\/[\S]+$/)
+        result = http_request("GET", body, (content_type == "text/plain" ? "*/*" : content_type), {}, nil, false)
+        raise Exception.new("Error adding data from remote URL #{body} => #{result.status} : #{result}") if result.status != 200
+        body = result.body
+      end
+
+      is_json =  (content_type.index("json") ? true : false)
+      http_request("POST", "#{database}/icv/remove", "*/*", {}, body, is_json, content_type, nil)
+    end
+
+    def clear_icvs(database)
+      http_request("POST", "#{database}/icv/clear", "*/*", {}, "", false, "text/plain", nil)
+    end
+
+    def convert_icv(database, body, content_type = "text/plain")
+      if(File.exists?(body))
+        body = File.open(body,"r").read
+      elsif(body =~ /^https?:\/\/[\S]+$/)
+        result = http_request("GET", body, (content_type == "text/plain" ? "*/*" : content_type), {}, nil, false)
+        raise Exception.new("Error adding data from remote URL #{body} => #{result.status} : #{result}") if result.status != 200
+        body = result.body
+      end
+
+      is_json =  (content_type.index("json") ? true : false)
+      http_request("POST", "#{database}/icv/convert", "*/*", {}, body, is_json, content_type, nil)
+    end
+
     #######################    
     # Database Operations
     #######################    
