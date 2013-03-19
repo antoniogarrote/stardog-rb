@@ -215,8 +215,8 @@ module Stardog
       begin
         txID = self.begin(db_name)
         yield txID
-        commit(db_name,txID)
-        true
+        result = commit(db_name,txID)
+        result.success? || false
       rescue Exception => ex
         debug "* Error in transaction #{txID}"
         debug ex.message
@@ -377,8 +377,7 @@ module Stardog
         body = result.body
       end
 
-      is_json =  (content_type.index("json") ? true : false)
-      http_request("POST", "#{database}/icv/convert", "*/*", {}, body, is_json, content_type, nil)
+      http_request("POST", "#{database}/icv/convert", "*/*", {}, body, false, content_type, nil)
     end
 
     #######################    
