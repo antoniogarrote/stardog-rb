@@ -33,6 +33,8 @@ module Stardog
 
   DEBUG = ENV["STARDOG_RB_DEBUG"] || false
 
+  class ICVException < Exception; end
+
   class StardogResponse
     attr_reader :status, :body
 
@@ -216,7 +218,11 @@ module Stardog
         txID = self.begin(db_name)
         yield txID
         result = commit(db_name,txID)
+        raise ICVException.new("ICV constraing violated") if(!result.success? && result.body.index("IC validation failed"))
         result.success? || false
+      rescue ICVException => ex
+        debug "* Error in commit due to ICV constraint violation. Transaction has already be rolled back"
+        raise ex
       rescue Exception => ex
         debug "* Error in transaction #{txID}"
         debug ex.message
@@ -450,7 +456,7 @@ module Stardog
 
     # Sets database offline.
     # * strategy_op: 'WAIT' | 'NO_WAIT', default 'WAIT'.
-    def online_db(dbname, strategy_op)
+    def online_db(dbname, strategy_op = 'WAIT')
       http_request("PUT", "admin/databases/#{dbname}/online", "application/json", {}, { "strategy" => strategy_op })
     end
 

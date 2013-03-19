@@ -15,47 +15,47 @@ describe "Integrity Constraints" do
     @conn = nil
   end
 
- it "should be able to add a ICV" do
-   path_tbox = File.join(File.dirname(__FILE__), "data", "tbox.owl")
-   result = @conn.add_icv(@db_name, path_tbox, "text/turtle")
-   expect(result.status).to be_eql(200)
-
-   result = @conn.list_icvs(@db_name)
-   expect(result.body.index("owl#Class")).not_to be_nil
- end
-
- it "should remove ICVs" do
-   path_tbox = File.join(File.dirname(__FILE__), "data", "tbox.owl")
-   result = @conn.add_icv(@db_name, path_tbox, "text/turtle")
-   puts result
-   expect(result.status).to be_eql(200)
-
-   result = @conn.list_icvs(@db_name)
-   expect(result.body.index("owl#Class")).not_to be_nil
-
-   result = @conn.remove_icv(@db_name, path_tbox, "text/turtle")
-   expect(result.status).to be_eql(204)
-
-   result = @conn.list_icvs(@db_name)
-   expect(result.body.index("owl#")).to be_nil
- end
-
-
- it "should clear ICVs" do
-   path_tbox = File.join(File.dirname(__FILE__), "data", "tbox.owl")
-   result = @conn.add_icv(@db_name, path_tbox, "text/turtle")
-   puts result
-   expect(result.status).to be_eql(200)
-
-   result = @conn.list_icvs(@db_name)
-   expect(result.body.index("owl#Class")).not_to be_nil
-
-   result = @conn.clear_icvs(@db_name)
-   expect(result.status).to be_eql(200)
-
-   result = @conn.list_icvs(@db_name)
-   expect(result.body.index("owl#")).to be_nil
- end
+# it "should be able to add a ICV" do
+#   path_tbox = File.join(File.dirname(__FILE__), "data", "tbox.owl")
+#   result = @conn.add_icv(@db_name, path_tbox, "text/turtle")
+#   expect(result.status).to be_eql(200)
+# 
+#   result = @conn.list_icvs(@db_name)
+#   expect(result.body.index("owl#Class")).not_to be_nil
+# end
+# 
+# it "should remove ICVs" do
+#   path_tbox = File.join(File.dirname(__FILE__), "data", "tbox.owl")
+#   result = @conn.add_icv(@db_name, path_tbox, "text/turtle")
+#   puts result
+#   expect(result.status).to be_eql(200)
+# 
+#   result = @conn.list_icvs(@db_name)
+#   expect(result.body.index("owl#Class")).not_to be_nil
+# 
+#   result = @conn.remove_icv(@db_name, path_tbox, "text/turtle")
+#   expect(result.status).to be_eql(204)
+# 
+#   result = @conn.list_icvs(@db_name)
+#   expect(result.body.index("owl#")).to be_nil
+# end
+# 
+# 
+# it "should clear ICVs" do
+#   path_tbox = File.join(File.dirname(__FILE__), "data", "tbox.owl")
+#   result = @conn.add_icv(@db_name, path_tbox, "text/turtle")
+#   puts result
+#   expect(result.status).to be_eql(200)
+# 
+#   result = @conn.list_icvs(@db_name)
+#   expect(result.body.index("owl#Class")).not_to be_nil
+# 
+#   result = @conn.clear_icvs(@db_name)
+#   expect(result.status).to be_eql(200)
+# 
+#   result = @conn.list_icvs(@db_name)
+#   expect(result.body.index("owl#")).to be_nil
+# end
 
 # it "should be possible to convert ICVs into SPARQL queries" do
 #   path_tbox = File.join(File.dirname(__FILE__), "data", "icv.owl")
@@ -68,7 +68,12 @@ describe "Integrity Constraints" do
     path_tbox = File.join(File.dirname(__FILE__), "data", "tbox.owl")
     path_abox = File.join(File.dirname(__FILE__), "data", "abox.owl",)
     result = @conn.add_icv(@db_name, path_tbox, "text/turtle")
-    result = @conn.add(@db_name, path_abox, nil, "text/turtle")
+    result = begin
+               @conn.add(@db_name, path_abox, nil, "text/turtle")
+               true
+             rescue ICVException
+               false
+             end
     expect(result).to be_false
   end
 end
