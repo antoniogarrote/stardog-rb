@@ -67,10 +67,12 @@ describe "Integrity Constraints" do
   it "should apply ICVs" do
     path_tbox = File.join(File.dirname(__FILE__), "data", "tbox.owl")
     path_abox = File.join(File.dirname(__FILE__), "data", "abox.owl",)
+    puts "*** CREATING RESTRICTION"
     result = @conn.add_icv(@db_name, path_tbox, "text/turtle")
     result = begin
-               @conn.add(@db_name, path_abox, nil, "text/turtle")
-               true
+               puts "*** ADDING VIOLATING TRIPLES"
+               res = @conn.add(@db_name, path_abox, nil, "text/turtle")
+               res
              rescue ICVException
                false
              end
