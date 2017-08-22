@@ -276,6 +276,25 @@ module Stardog
       http_request("GET", "#{database}/#{txID}/query", accept_header, options, nil, (ask_request ? false: true))
     end
 
+    def update(database, update, graph_uri=nil)
+      with_transaction(database) do |txId|
+        result = update_in_transaction(database, txId, update, graph_uri)
+        raise Exception.new("Error updating data in database #{database} -> #{result.body}") unless(result.success?)
+        result
+      end
+    end
+
+    def update_in_transaction(database, txID, update, graph_uri=nil)
+      options = nil
+      options = {"graph-uri" => graph_uri} if graph_uri
+
+      if(File.exists?(update))
+        update = File.open(update,"r").read
+      end
+
+      http_request("POST", "#{database}/#{txID}/update", "*/*", options, update, false, "application/sparql-update", nil)
+    end
+
     def add_in_transaction(database, txID, body, graph_uri=nil, content_type="text/plain")
       options = nil
       options = {"graph-uri" => graph_uri} if graph_uri
@@ -287,7 +306,7 @@ module Stardog
         raise Exception.new("Error adding data from remote URL #{body} => #{result.status} : #{result}") if result.status != 200
         body = result.body
       end
-      
+
       http_request("POST", "#{database}/#{txID}/add", "*/*", options, body, false, content_type, nil)
     end
 
@@ -522,7 +541,6 @@ module Stardog
           :multipart => true
         }
       end
-      
       
       debug "ARGUMENTS:"
       debug arguments.inspect
