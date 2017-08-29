@@ -325,7 +325,15 @@ module Stardog
       http_request("POST", "#{database}/#{txID}/remove", "text/plain", options, body, false, content_type, nil)
     end
 
-    def clear_db(database, txId, graph_uri = nil)
+    def clear_db(database, graph_uri=nil)
+      with_transaction(database) do |txId|
+        result = clear_db_in_transaction(database, txId, graph_uri)
+        raise Exception.new("Error clearing the database #{database} -> #{result.body}") unless(result.success?)
+        result
+      end
+    end
+
+    def clear_db_in_transaction(database, txId, graph_uri = nil)
       options = nil
       options = {"graph-uri" => graph_uri} if graph_uri
 
