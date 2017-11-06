@@ -237,6 +237,7 @@ module Stardog
       limit = options[:limit] 
       offset = options[:offset] 
       accept = options[:accept]
+      reasoning = options[:reasoning]
       ask_request = options.delete(:ask)
       describe_request = options.delete(:describe)
 
@@ -251,6 +252,7 @@ module Stardog
       options[:"base-uri"] = base_uri if base_uri
       options[:limit] = limit if limit
       options[:offset] = offset if offset
+      options[:reasoning] = reasoning if reasoning
 
       http_request("GET", "#{database}/query", accept_header, options, nil, (ask_request ? false: true))
     end
