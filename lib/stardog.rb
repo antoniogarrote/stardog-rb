@@ -1,6 +1,7 @@
 require 'rest-client'
 require 'json'
 require 'tempfile'
+require 'pp'
 
 require "net/http"
 
@@ -450,12 +451,13 @@ module Stardog
     end
 
     # Creates a new database
-    def create_db(dbname, creation_options={})
-      options = creation_options[:options] || {}
-      files = creation_options[:files] ||= []
+    def create_db(dbname, options = {}, files = [])
+      options ||= {}
+      files ||= []
       if(files.empty?)
-        http_request("POST", "admin/databases", "text/plain", {}, {:dbname => dbname, :options => options, :files => files}.to_json, true, "application/json", true)
+        http_request("POST", "admin/databases", "*/*", {}, {:dbname => dbname, :options => options}, true, "application/json", true)
       else
+        # TODO: need to fix
         f = Tempfile.new("stardog_rb_#{Time.now.to_i}")
         f << "{\"dbname\":\"#{dbname}\",\"options\":#{options.to_json},\"files\":[{"
         files.each_with_index do |datafile,i|
@@ -536,22 +538,19 @@ module Stardog
         arguments[:headers][:content_type] = content_type if content_type
       end
 
-      file = nil
-      if(multipart) 
-
-        unless(arguments[:payload].is_a?(File))
-          file = Tempfile.new("stardog_rb_#{Time.now.to_i.to_s}")
-          file.write(arguments[:payload])
-          file.close
-          arguments[:payload] = File.new(file)
-          arguments[:multipart] = true
+      # file = nil
+      if(multipart)
+        if(arguments[:payload].is_a?(File))
+          # TODO:
+        else
+          arguments[:payload] = {
+            # :file => arguments[:payload],
+            :multipart => true,
+            :root => arguments[:payload].to_json
+          }
         end
-        arguments[:payload] = {
-          :file => arguments[:payload],
-          :multipart => true
-        }
       end
-      
+
       debug "ARGUMENTS:"
       debug arguments.inspect
       response = RestClient::Request.execute(arguments)
@@ -597,7 +596,7 @@ module Stardog
         raise exception
       end
     ensure
-      file.unlink unless file.nil?
+      # file.unlink unless file.nil?
     end # end of http_request
 
     def debug(msg)
