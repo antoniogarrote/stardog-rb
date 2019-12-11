@@ -1,6 +1,7 @@
 require 'rest-client'
 require 'json'
 require 'tempfile'
+require 'pp'
 
 require "net/http"
 
@@ -237,6 +238,7 @@ module Stardog
       limit = options[:limit] 
       offset = options[:offset] 
       accept = options[:accept]
+      reasoning = options[:reasoning]
       ask_request = options.delete(:ask)
       describe_request = options.delete(:describe)
 
@@ -251,6 +253,7 @@ module Stardog
       options[:"base-uri"] = base_uri if base_uri
       options[:limit] = limit if limit
       options[:offset] = offset if offset
+      options[:reasoning] = reasoning if reasoning
 
       http_request("GET", "#{database}/query", accept_header, options, nil, (ask_request ? false: true))
     end
@@ -276,6 +279,25 @@ module Stardog
       http_request("GET", "#{database}/#{txID}/query", accept_header, options, nil, (ask_request ? false: true))
     end
 
+    def update(database, update, graph_uri=nil)
+      with_transaction(database) do |txId|
+        result = update_in_transaction(database, txId, update, graph_uri)
+        raise Exception.new("Error updating data in database #{database} -> #{result.body}") unless(result.success?)
+        result
+      end
+    end
+
+    def update_in_transaction(database, txID, update, graph_uri=nil)
+      options = nil
+      options = {"graph-uri" => graph_uri} if graph_uri
+
+      if(File.exists?(update))
+        update = File.open(update,"r").read
+      end
+
+      http_request("POST", "#{database}/#{txID}/update", "*/*", options, update, false, "application/sparql-update", nil)
+    end
+
     def add_in_transaction(database, txID, body, graph_uri=nil, content_type="text/plain")
       options = nil
       options = {"graph-uri" => graph_uri} if graph_uri
@@ -287,7 +309,7 @@ module Stardog
         raise Exception.new("Error adding data from remote URL #{body} => #{result.status} : #{result}") if result.status != 200
         body = result.body
       end
-      
+
       http_request("POST", "#{database}/#{txID}/add", "*/*", options, body, false, content_type, nil)
     end
 
@@ -306,7 +328,15 @@ module Stardog
       http_request("POST", "#{database}/#{txID}/remove", "text/plain", options, body, false, content_type, nil)
     end
 
-    def clear_db(database, txId, graph_uri = nil)
+    def clear_db(database, graph_uri=nil)
+      with_transaction(database) do |txId|
+        result = clear_db_in_transaction(database, txId, graph_uri)
+        raise Exception.new("Error clearing the database #{database} -> #{result.body}") unless(result.success?)
+        result
+      end
+    end
+
+    def clear_db_in_transaction(database, txId, graph_uri = nil)
       options = nil
       options = {"graph-uri" => graph_uri} if graph_uri
 
@@ -421,12 +451,13 @@ module Stardog
     end
 
     # Creates a new database
-    def create_db(dbname, creation_options={})
-      options = creation_options[:options] || {}
-      files = creation_options[:files] ||= []
+    def create_db(dbname, options = {}, files = [])
+      options ||= {}
+      files ||= []
       if(files.empty?)
-        http_request("POST", "admin/databases", "text/plain", {}, {:dbname => dbname, :options => options, :files => files}.to_json, true, "application/json", true)
+        http_request("POST", "admin/databases", "*/*", {}, {:dbname => dbname, :options => options}, true, "application/json", true)
       else
+        # TODO: need to fix
         f = Tempfile.new("stardog_rb_#{Time.now.to_i}")
         f << "{\"dbname\":\"#{dbname}\",\"options\":#{options.to_json},\"files\":[{"
         files.each_with_index do |datafile,i|
@@ -507,23 +538,19 @@ module Stardog
         arguments[:headers][:content_type] = content_type if content_type
       end
 
-      file = nil
-      if(multipart) 
-
-        unless(arguments[:payload].is_a?(File))
-          file = Tempfile.new("stardog_rb_#{Time.now.to_i.to_s}")
-          file.write(arguments[:payload])
-          file.close
-          arguments[:payload] = File.new(file)
-          arguments[:multipart] = true
+      # file = nil
+      if(multipart)
+        if(arguments[:payload].is_a?(File))
+          # TODO:
+        else
+          arguments[:payload] = {
+            # :file => arguments[:payload],
+            :multipart => true,
+            :root => arguments[:payload].to_json
+          }
         end
-        arguments[:payload] = {
-          :file => arguments[:payload],
-          :multipart => true
-        }
       end
-      
-      
+
       debug "ARGUMENTS:"
       debug arguments.inspect
       response = RestClient::Request.execute(arguments)
@@ -569,7 +596,7 @@ module Stardog
         raise exception
       end
     ensure
-      file.unlink unless file.nil?
+      # file.unlink unless file.nil?
     end # end of http_request
 
     def debug(msg)
